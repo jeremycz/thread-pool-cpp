@@ -48,7 +48,10 @@ private:
             }
 
             if (task) {
-                task();
+                try {
+                    task();
+                } catch (...) {
+                }
             } else {
                 std::this_thread::yield();
             }
