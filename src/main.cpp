@@ -1,50 +1,23 @@
 #include <iostream>
+#include <chrono>
 
 #include "../thread_pool.hpp"
 
-void TestThreadPoolWorker() {
-    std::condition_variable cv;
-    std::mutex mutex;
-
-    ThreadPoolWorker worker;
-    worker.Start();
-
-    worker.SetTask([]() -> void {
-        LOG("Task started");
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        LOG("Task finished");
-    }, &cv);
-
-    std::unique_lock<std::mutex> lock(mutex);
-    cv.wait(lock);
-
-    worker.SetTask([]() -> void {
-        LOG("Task started");
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        LOG("Task finished");
-    }, &cv);
-
-    cv.wait(lock);
-
-    // stop during task execution
-    worker.SetTask([]() -> void {
-        LOG("Task started");
-        std::this_thread::sleep_for(std::chrono::seconds(3));
-        LOG("Task finished");
-    }, &cv);
-
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    worker.Stop();
-}
-
 void TestThreadPool() {
-    // ThreadPool thread_pool;
-    // thread_pool.Start();
-    // std::this_thread::sleep_for(std::chrono::seconds(3));
+    ThreadPool thread_pool(5);
+    for (int i = 0; i < 20; ++i) {
+        std::cout << "Submitting Task " << i << std::endl;
+        thread_pool.Submit([i]() {
+            std::cout << "Starting Task " << i << std::endl;
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            std::cout << "Finishing Task " << i << std::endl;
+        });
+    }
+
+    std::this_thread::sleep_for(std::chrono::seconds(10));
 }
 
 int main() {
-    TestThreadPoolWorker();
     TestThreadPool();
     return 0;
 }
