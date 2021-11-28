@@ -7,6 +7,7 @@
 #include <queue>
 #include <mutex>
 #include <algorithm>
+#include <condition_variable>
 
 class ThreadPool {
 public:
@@ -25,13 +26,18 @@ public:
 
     ~ThreadPool() {
         _done = true;
+        _cv.notify_all();
         std::for_each(_threads.begin(), _threads.end(),
             std::mem_fn(&std::thread::join));
     }
 
     void Submit(const std::function<void()> task) {
-        std::lock_guard<std::mutex> lock(_work_queue_mutex);
-        _work_queue.push(task);
+        {
+            std::lock_guard<std::mutex> lock(_work_queue_mutex);
+            _work_queue.push(task);
+        }
+
+        _cv.notify_one();
     }
 
 private:
@@ -40,7 +46,7 @@ private:
             std::function<void()> task;
             {
                 std::lock_guard<std::mutex> lock(_work_queue_mutex);
-                if (!_work_queue.empty()) {
+                if (!_work_queue.empty() && !_done) {
                     task = _work_queue.front();
                     _work_queue.pop();
                 }
@@ -51,8 +57,9 @@ private:
                     task();
                 } catch (...) {
                 }
-            } else {
-                std::this_thread::yield();
+            } else if (!_done) {
+                std::unique_lock<std::mutex> lock(_work_queue_mutex);
+                _cv.wait(lock);
             }
         }
     }
@@ -61,4 +68,5 @@ private:
     std::vector<std::thread> _threads;
     std::queue<std::function<void()>> _work_queue;
     std::mutex _work_queue_mutex;
+    std::condition_variable _cv;
 };
