@@ -23,11 +23,8 @@ public:
 
     ~ThreadPool() {
         _done = true;
-        for (auto& thread : _threads) {
-            if (thread.joinable()) {
-                thread.join();
-            }
-        }
+        std::for_each(_threads.begin(), _threads.end(),
+            std::mem_fn(&std::thread::join));
     }
 
     void Submit(const std::function<void()> task) {
