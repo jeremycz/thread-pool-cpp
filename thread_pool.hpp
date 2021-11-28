@@ -11,7 +11,8 @@
 class ThreadPool {
 public:
     ThreadPool(unsigned int size = std::thread::hardware_concurrency()) {
-        size = size ? size : std::thread::hardware_concurrency();
+        size = size ? size : 2;
+
         try {
             for (unsigned i = 0; i < size; ++i) {
                 _threads.push_back(std::thread(&ThreadPool::Worker, this));
